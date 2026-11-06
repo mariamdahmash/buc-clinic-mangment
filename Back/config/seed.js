@@ -1,6 +1,6 @@
 const User = require('../src/modules/Auth/user.model');
 const bcrypt = require('bcryptjs');
-const { password } = require('../src/platform/validation');
+const { password } = require('../src/modules/Auth/auth.validation');
 module.exports = async function seedSuperAdmin() {
   if (await User.exists({ role: 'superadmin' })) return;
   const secret = process.env.SUPERADMIN_PASSWORD;

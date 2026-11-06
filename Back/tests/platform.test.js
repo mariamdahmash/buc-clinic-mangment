@@ -8,7 +8,7 @@ const { MongoMemoryReplSet } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
-const M = require('../src/platform/models');
+const M = require('../config/models');
 const app = require('../src/app');
 let db, a, b, ta, tb, superToken, special, doctor, schedule;
 const auth = t => ({ Authorization: 'Bearer '+t });
@@ -90,4 +90,27 @@ test('clinic disable revokes existing admin access',async()=>{
  assert.equal((await request(app).patch('/api/v1/clinics/'+b.id+'/status').set(auth(superToken)).send({isActive:false})).status,200);
  assert.equal((await request(app).get('/api/v1/doctors').set(auth(tb))).status,403);
  assert.equal((await request(app).get('/api/v1/public/clinics/clinic-b')).status,404);
+});
+
+
+test('provisioned clinic admin can log in and only sees their clinic', async () => {
+ const password = 'New-clinic-password-123';
+ const nationalId = '98765432101234';
+ const created = await post('/clinics', {
+  name: 'New Clinic', slug: 'new-clinic', address: 'Cairo', phoneNumbers: [],
+  adminData: { name: 'New Admin', email: 'new@example.com', nationalId, password },
+ }, superToken);
+ assert.equal(created.status, 201);
+ const login = await post('/auth/login', { nationalId, password });
+ assert.equal(login.status, 200);
+ assert.equal(login.body.data.user.role, 'clinicadmin');
+ assert.equal(login.body.data.user.password, undefined);
+ const token = login.body.data.token;
+ const own = await request(app).get('/api/v1/clinic/me').set(auth(token));
+ assert.equal(own.status, 200);
+ assert.equal(own.body.data.slug, 'new-clinic');
+ assert.deepEqual((await request(app).get('/api/v1/doctors').set(auth(token))).body.data, []);
+ assert.equal((await post('/auth/login', { nationalId, password: 'incorrect-password' })).status, 401);
+ assert.equal((await request(app).patch('/api/v1/clinics/' + own.body.data._id + '/status').set(auth(superToken)).send({ isActive: false })).status, 200);
+ assert.equal((await post('/auth/login', { nationalId, password })).status, 403);
 });

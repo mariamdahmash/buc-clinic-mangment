@@ -1,0 +1,11 @@
+const { z } = require('zod');
+const { DateTime } = require('luxon');
+const text = z.string().trim().min(1).max(200);
+const optional = z.string().trim().max(2000).default('');
+const id = z.string().regex(/^[a-f\d]{24}$/i, 'معرّف غير صحيح');
+const url = z.union([z.literal(''), z.url().refine(v => /^https?:\/\//.test(v))]).default('');
+const active = z.boolean().default(true);
+const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+const password = z.string().min(12, 'كلمة المرور يجب أن تكون 12 حرفًا على الأقل').max(72).refine(v => Buffer.byteLength(v) <= 72);
+const status = z.object({ isActive: z.boolean() }).strict();
+module.exports = { z, DateTime, text, optional, id, url, active, time, password, status };

@@ -11,12 +11,15 @@ app.use(cors({ origin: (origin, done) => {
 } }));
 app.use(express.json({ limit: '32kb' }));
 app.use(rateLimit({ windowMs: 60000, limit: 200, standardHeaders: 'draft-8', legacyHeaders: false }));
-app.use('/api/v1', require('./platform/routes'));
-app.use((req, res) => res.status(404).json({ message: 'المسار غير موجود' }));
-app.use((err, req, res, next) => {
-  if (err.name === 'ZodError') return res.status(400).json({ message: 'راجع البيانات المطلوبة وصيغة الحقول', details: err.issues.map(i => ({ field: i.path.join('.'), message: i.message })) });
-  if (err.code === 11000) return res.status(409).json({ message: 'البيانات مسجلة بالفعل أو تم حجز الموعد. اختر موعدًا آخر.' });
-  if (err.name === 'ValidationError' || err.name === 'CastError' || err.type === 'entity.parse.failed') return res.status(400).json({ message: 'بيانات غير صحيحة' });
-  res.status(err.status || 500).json({ message: err.status ? err.message : 'تعذر إتمام العملية. حاول مرة أخرى.' });
-});
+app.use('/api/v1/auth', require('./modules/Auth/auth.routes'));
+app.use('/api/v1/public', require('./modules/Public/public.routes'));
+app.use('/api/v1', require('./modules/Clinics/clinic.routes'));
+app.use('/api/v1/specialties', require('./modules/Specialties/specialty.routes'));
+app.use('/api/v1/doctors', require('./modules/Doctors/doctor.routes'));
+app.use('/api/v1/services', require('./modules/Services/service.routes'));
+app.use('/api/v1/schedules', require('./modules/Schedules/schedule.routes'));
+app.use('/api/v1/bookings', require('./modules/Bookings/booking.routes'));
+const { notFound, errorHandler } = require('../middlewares/error.middleware');
+app.use(notFound);
+app.use(errorHandler);
 module.exports = app;

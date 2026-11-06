@@ -7,7 +7,9 @@ export default function ContactForm({ clinic, specialties }) {
 
   const submitForm = (event) => {
     event.preventDefault();
-    const clinicPhoneNumber = clinic?.phoneNumbers?.[0] || '201274991103';
+    let clinicPhoneNumber = clinic?.phoneNumbers?.[0]?.replace(/[^0-9]/g, '') || '';
+    if (!clinicPhoneNumber) { setNotice('لا يوجد رقم واتساب متاح لهذه العيادة.'); return; }
+    if (clinicPhoneNumber.startsWith('01') && clinicPhoneNumber.length === 11) clinicPhoneNumber = '2' + clinicPhoneNumber;
     const message = `مرحبًا، أريد الاستفسار عن خدمات ${clinic?.name || 'العيادة'}.%0Aالاسم: ${encodeURIComponent(form.name)}%0Aرقم التواصل: ${encodeURIComponent(form.phone)}%0Aنوع الاستفسار: ${encodeURIComponent(form.service)}`;
     
     window.open(`https://wa.me/${clinicPhoneNumber}/?text=${message}`, '_blank', 'noopener,noreferrer');

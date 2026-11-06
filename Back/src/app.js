@@ -1,24 +1,22 @@
 const express = require('express');
 const cors = require('cors');
-
-const userRoutes = require('./modules/Auth/auth.routes');
-const clinicRoutes = require('./modules/Clinics/clinic.routes');
-const publicRoutes = require('./modules/Public/public.routes');
-const specialtyRoutes = require('./modules/Specialties/specialty.routes');
-const doctorRoutes = require('./modules/Doctors/doctor.routes');
-
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
 const app = express();
-
-// 1. Global Middlewares
-app.use(cors());
-app.use(express.json());
-
-// 2. Module Routes
-app.use('/api/v1/auth', userRoutes);
-app.use('/api/v1/clinics', clinicRoutes);
-app.use('/api/v1/public', publicRoutes);
-app.use('/api/v1/specialties', specialtyRoutes);
-app.use('/api/v1/doctors', doctorRoutes);
-
-
-module.exports = app; 
+app.disable('x-powered-by');
+app.use(helmet());
+app.use(cors({ origin: (origin, done) => {
+  const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(s => s.trim());
+  done(null, !origin || allowed.includes(origin));
+} }));
+app.use(express.json({ limit: '32kb' }));
+app.use(rateLimit({ windowMs: 60000, limit: 200, standardHeaders: 'draft-8', legacyHeaders: false }));
+app.use('/api/v1', require('./platform/routes'));
+app.use((req, res) => res.status(404).json({ message: 'المسار غير موجود' }));
+app.use((err, req, res, next) => {
+  if (err.name === 'ZodError') return res.status(400).json({ message: 'راجع البيانات المطلوبة وصيغة الحقول', details: err.issues.map(i => ({ field: i.path.join('.'), message: i.message })) });
+  if (err.code === 11000) return res.status(409).json({ message: 'البيانات مسجلة بالفعل أو تم حجز الموعد. اختر موعدًا آخر.' });
+  if (err.name === 'ValidationError' || err.name === 'CastError' || err.type === 'entity.parse.failed') return res.status(400).json({ message: 'بيانات غير صحيحة' });
+  res.status(err.status || 500).json({ message: err.status ? err.message : 'تعذر إتمام العملية. حاول مرة أخرى.' });
+});
+module.exports = app;

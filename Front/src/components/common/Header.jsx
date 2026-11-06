@@ -8,7 +8,7 @@ export default function Header({ clinic }) {
     { label: 'التخصصات', href: '#specialties' },
     { label: 'الأطباء', href: '#doctors' },
     { label: 'الخدمات', href: '#services' },
-    { label: 'عن العيادة', href: '#about' },
+    { label: 'حجز موعد', href: '#booking' },
     { label: 'تواصل معنا', href: '#contact' },
   ];
 
@@ -46,7 +46,7 @@ export default function Header({ clinic }) {
           </a>
 
           {/* Navigation */}
-          <nav className="hidden items-center gap-8 md:flex">
+          <nav className="hidden items-center gap-8 lg:flex">
             {quickLinks.map((link) => (
               <a key={link.href} href={link.href} className="text-sm font-bold text-slate-600 transition hover:text-brand-700">
                 {link.label}
@@ -54,13 +54,14 @@ export default function Header({ clinic }) {
             ))}
           </nav>
 
-          <a href="#contact" className="hidden items-center gap-2 rounded-full bg-brand-700 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-brand-800 md:inline-flex">
-            تواصل معنا <ArrowLeft size={16} />
+          <a href="#booking" className="hidden items-center gap-2 rounded-full bg-brand-700 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-brand-800 lg:inline-flex">
+            احجز موعدك <ArrowLeft size={16} />
           </a>
 
           <button
             type="button"
-            className="rounded-xl border border-slate-200 p-2 text-brand-900 md:hidden"
+            aria-label="القائمة" aria-expanded={menuOpen}
+            className="rounded-xl border border-slate-200 p-2 text-brand-900 lg:hidden"
             onClick={() => setMenuOpen((v) => !v)}
           >
             {menuOpen ? <X /> : <Menu />}
@@ -68,7 +69,7 @@ export default function Header({ clinic }) {
         </div>
 
         {menuOpen && (
-          <nav className="border-t border-slate-100 bg-white px-4 py-3 md:hidden">
+          <nav className="border-t border-slate-100 bg-white px-4 py-3 lg:hidden">
             {quickLinks.map((link) => (
               <a key={link.href} href={link.href} onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 font-bold text-slate-700 hover:bg-brand-50">
                 {link.label}

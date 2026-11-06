@@ -25,8 +25,8 @@ export default function HeroSection({ clinic }) {
           </p>
           
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a href="#contact" className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-700 px-7 py-4 font-extrabold text-white shadow-xl shadow-brand-700/20 transition hover:-translate-y-0.5 hover:bg-brand-800">
-              تواصل للاستفسار <ArrowLeft size={18} />
+            <a href="#booking" className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-700 px-7 py-4 font-extrabold text-white shadow-xl shadow-brand-700/20 transition hover:-translate-y-0.5 hover:bg-brand-800">
+              احجز موعدك <ArrowLeft size={18} />
             </a>
             {primaryPhone && (
               <a href={`tel:${primaryPhone}`} className="inline-flex items-center justify-center gap-2 rounded-full border border-brand-200 bg-white px-7 py-4 font-extrabold text-brand-800 transition hover:bg-brand-50">

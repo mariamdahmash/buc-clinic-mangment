@@ -1,4 +1,5 @@
 require('dotenv').config();
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error('JWT_SECRET must contain at least 32 random characters');
 const app = require('./src/app');
 const connectDB = require('./config/db');
 const seedSuperAdmin = require('./config/seed');
@@ -9,6 +10,7 @@ const startServer = async () => {
   try {
     
     await connectDB();
+    await Promise.all(Object.values(require("./src/platform/models")).map(model => model.init()));
     await seedSuperAdmin();
 
     console.log('Database connected successfully...');

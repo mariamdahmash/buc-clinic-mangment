@@ -7,6 +7,7 @@ import ServicesSection from '../components/landing/ServicesSection';
 import DoctorsSection from '../components/landing/DoctorsSection';
 import SpecialtiesSection from '../components/landing/SpecialtiesSection';
 import ContactForm from '../components/landing/ContactForm';
+import BookingSection from '../components/landing/BookingSection';
 import Footer from '../components/common/Footer';
 
 export default function ClinicLandingPage() {
@@ -29,16 +30,17 @@ export default function ClinicLandingPage() {
   if (loading) return <div className="flex h-screen items-center justify-center font-bold">جاري تحميل بيانات العيادة...</div>;
   if (error) return <div className="flex h-screen items-center justify-center text-red-600 font-bold">{error}</div>;
 
-  const { clinic, specialties,services, doctors } = data;
+  const { clinic, specialties,services, doctors, schedules } = data;
 
   return (
-    <div id="home" className="min-h-screen bg-white text-slate-800">
+    <div id="home" className="landing-page min-h-screen bg-white text-slate-800">
       <Header clinic={clinic} />
       <main>
         <HeroSection clinic={clinic} />
         <SpecialtiesSection specialties={specialties} />
         <ServicesSection services={services} />
         <DoctorsSection doctors={doctors} />
+        <BookingSection clinic={clinic} doctors={doctors} schedules={schedules || []} />
         <ContactForm clinic={clinic} specialties={specialties} />
       </main>
       <Footer clinic={clinic} />

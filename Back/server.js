@@ -10,7 +10,7 @@ const startServer = async () => {
   try {
     
     await connectDB();
-    await Promise.all(Object.values(require("./src/platform/models")).map(model => model.init()));
+    await Promise.all(Object.values(require("./config/models")).map(model => model.init()));
     await seedSuperAdmin();
 
     console.log('Database connected successfully...');

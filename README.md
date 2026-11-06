@@ -21,6 +21,19 @@ Requires Node.js 22+ and MongoDB **replica set** (or MongoDB Atlas). Transaction
 - Concurrent mutations are serialized per clinic using a transaction; an additional unique partial index prevents two active bookings for the same slot.
 - Existing blue clinic branding is retained. Clinic names and logos are loaded from clinic data.
 
+## Backend architecture
+
+Each domain lives in `Back/src/modules`: Auth, Clinics, Specialties, Doctors, Services, Schedules, Bookings, and Public.
+
+- `*.routes.js` wires endpoints, authentication, authorization, and rate limiting.
+- `*.controller.js` validates request input, calls services, and formats HTTP responses.
+- `*.service.js` owns business rules and persistence; it does not depend on Express requests or responses.
+- `*.validation.js` defines domain input schemas; `*.model.js` defines persisted domain data. Public aggregates existing domains and has no separate collection.
+- `Back/middlewares` contains shared authentication, rate limiting, and error handling. `src/utils` contains small shared validation/time/error helpers.
+- `Clinics/clinic.transaction.js` coordinates atomic clinic-scoped writes. `config/models.js` is only the startup/test model registry.
+
+`src/app.js` composes the middleware and domain routers. The `/api/v1` endpoint paths remain unchanged.
+
 ## Checks
 
 `cd Back && npm test` runs integration/security tests against an isolated MongoDB replica set. On the first run the test dependency downloads the official MongoDB binary; network access is needed. Test database files are kept in ignored `Back/.cache/`.

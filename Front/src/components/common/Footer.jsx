@@ -23,7 +23,7 @@ export default function Footer({ clinic }) {
         </div>
 
         <p className="text-xs leading-6 text-slate-500">
-          هذه الصفحة التعريفية لا تمثل نظام حجز طبي مؤكد. يرجى الاتصال بالمركز لتأكيد الخدمات والمواعيد.
+          احجز من المواعيد المتاحة، ولتغيير حجزك تواصل مباشرة مع العيادة.
         </p>
 
         {clinic?.facebookUrl && (

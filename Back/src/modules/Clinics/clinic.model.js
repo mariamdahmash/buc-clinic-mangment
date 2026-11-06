@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const clinicSchema = new mongoose.Schema(
   {
+    mutationVersion: { type: Number, default: 0, select: false },
     name: {
       type: String,
       required: [true, 'Clinic name is required'],

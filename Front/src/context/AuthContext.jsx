@@ -1,12 +1,15 @@
-import { createContext, useContext, useMemo, useState } from 'react';
-import { login as loginRequest } from '../api/authApi';
+import { createContext, useContext, useMemo, useState } from "react";
+import { login as loginRequest } from "../api/authApi";
 
 const AuthContext = createContext(null);
-const STORAGE_KEY = 'buc_admin_session';
+const STORAGE_KEY = "buc_admin_session";
 
 function readSession() {
-  try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null'); }
-  catch { return null; }
+  try {
+    return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
+  } catch {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }) {
@@ -14,7 +17,8 @@ export function AuthProvider({ children }) {
 
   const signIn = async (credentials) => {
     const result = await loginRequest(credentials);
-    if (!result?.token || !result?.user) throw new Error('استجابة تسجيل الدخول غير مكتملة من الخادم');
+    if (!result?.token || !result?.user)
+      throw new Error("استجابة تسجيل الدخول غير مكتملة من الخادم");
     const nextSession = { token: result.token, user: result.user };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
@@ -32,6 +36,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const value = useContext(AuthContext);
-  if (!value) throw new Error('useAuth must be used inside AuthProvider');
+  if (!value) throw new Error("useAuth must be used inside AuthProvider");
   return value;
 }

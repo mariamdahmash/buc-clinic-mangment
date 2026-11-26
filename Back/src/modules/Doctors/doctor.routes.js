@@ -3,6 +3,7 @@ const controller = require('./doctor.controller');
 const { protect, authorize } = require('../../../middlewares/auth.middleware');
 
 router.use(protect, authorize('clinicadmin'));
+
 router.get('/', controller.getAll);
 router.post('/', controller.create);
 router.put('/:id', controller.update);

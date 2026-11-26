@@ -1,5 +1,8 @@
 import { ArrowLeft, CheckCircle2, HeartPulse, Phone } from 'lucide-react';
+import coverImg from '../../../public/cover.jpg';
 
+
+++
 export default function HeroSection({ clinic }) {
   const primaryPhone = clinic?.phoneNumbers?.[0] || '';
 
@@ -44,7 +47,7 @@ export default function HeroSection({ clinic }) {
         <div className="relative mx-auto w-full max-w-xl">
           <div className="relative overflow-hidden rounded-[2rem] border-[7px] border-white bg-brand-100 shadow-soft">
             <img
-              src={clinic?.coverImage || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1100&q=85'}
+              src={clinic?.coverImage || coverImg || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1100&q=85'}
               alt={clinic?.name}
               className="h-[330px] w-full object-cover sm:h-[430px]"
             />

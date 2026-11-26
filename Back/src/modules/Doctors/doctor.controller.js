@@ -1,26 +1,68 @@
-const service = require('./doctor.service');
-const { schema } = require('./doctor.validation');
-const { id, status } = require('../../utils/validation');
+const doctorService = require('./doctor.service');
 
 const getAll = async (req, res) => {
-  res.json({ success: true, data: await service.getAll(req.user.clinicId) });
+  try {
+    const clinicId = req.user.clinicId;
+    const doctors = await doctorService.getAll(clinicId);
+    res.status(200).json({ success: true, data: doctors });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
+  }
 };
+
 const create = async (req, res) => {
-  const data = schema.parse(req.body);
-  res.status(201).json({ success: true, data: await service.create(req.user.clinicId, data) });
+  try {
+    const clinicId = req.user.clinicId;
+    const body = { ...req.body };
+    
+    if (!body.image) body.image = '';
+    if (!body.bio) body.bio = '';
+
+    const doctor = await doctorService.create(clinicId, body);
+    res.status(201).json({ success: true, data: doctor });
+  } catch (error) {
+    res.status(error.status || 400).json({ success: false, message: error.message });
+  }
 };
+
 const update = async (req, res) => {
-  const itemId = id.parse(req.params.id);
-  const data = schema.parse(req.body);
-  res.json({ success: true, data: await service.update(req.user.clinicId, itemId, data) });
+  try {
+    const clinicId = req.user.clinicId;
+    const { id } = req.params;
+    const updated = await doctorService.update(clinicId, id, req.body);
+    res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    res.status(error.status || 400).json({ success: false, message: error.message });
+  }
 };
+
 const setStatus = async (req, res) => {
-  const itemId = id.parse(req.params.id);
-  const { isActive } = status.parse(req.body);
-  res.json({ success: true, data: await service.setStatus(req.user.clinicId, itemId, isActive) });
+  try {
+    const clinicId = req.user.clinicId;
+    const { id } = req.params;
+    const { isActive } = req.body;
+    const updated = await doctorService.setStatus(clinicId, id, isActive);
+    res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    res.status(error.status || 400).json({ success: false, message: error.message });
+  }
 };
+
 const remove = async (req, res) => {
-  const itemId = id.parse(req.params.id);
-  res.json({ success: true, data: await service.remove(req.user.clinicId, itemId) });
+  try {
+    const clinicId = req.user.clinicId;
+    const { id } = req.params;
+    await doctorService.remove(clinicId, id);
+    res.status(200).json({ success: true, message: 'تم حذف الطبيب بنجاح' });
+  } catch (error) {
+    res.status(error.status || 400).json({ success: false, message: error.message });
+  }
 };
-module.exports = { getAll, create, update, setStatus, remove };
+
+module.exports = {
+  getAll,
+  create,
+  update,
+  setStatus,
+  remove,
+};

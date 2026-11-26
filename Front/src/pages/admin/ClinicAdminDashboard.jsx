@@ -1,46 +1,555 @@
-import { useEffect, useRef, useState } from 'react';
-import { Plus, RefreshCw, Search, Pencil, Trash2 } from 'lucide-react';
-import AdminShell from '../../components/admin/AdminShell';
-import { apiRequest } from '../../api/http';
-import { useAuth } from '../../context/AuthContext';
+import { useEffect, useRef, useState } from "react";
+import { Plus, RefreshCw, Search, Pencil, Trash2 } from "lucide-react";
+import AdminShell from "../../components/admin/AdminShell";
+import { apiRequest } from "../../api/http";
+import { useAuth } from "../../context/AuthContext";
+
 const sections = {
- specialties:{label:'التخصصات',single:'تخصص',fields:[['name','اسم التخصص'],['description','الوصف','textarea'],['icon','رمز تعبيري','optional']]},
- doctors:{label:'الدكاترة',single:'طبيب',fields:[['name','اسم الطبيب'],['title','الدرجة / المسمى'],['email','البريد الإلكتروني','email'],['specialtyId','التخصص','specialties'],['image','رابط الصورة','url'],['bio','نبذة','textarea']]},
- services:{label:'الخدمات',single:'خدمة',fields:[['title','اسم الخدمة'],['description','الوصف','textarea'],['price','السعر بالجنيه','number'],['specialtyId','التخصص (اختياري)','specialtiesOptional']]},
- schedules:{label:'جداول العمل',single:'فترة عمل',fields:[['doctorId','الطبيب','doctors'],['date','التاريخ','date'],['startTime','من الساعة','time'],['endTime','إلى الساعة','time'],['slotMinutes','مدة الكشف بالدقائق','number']]},
- bookings:{label:'الحجوزات',single:'حجز',fields:[['patientName','اسم المريض'],['phone','رقم التواصل','tel'],['scheduleId','فترة العمل','schedules'],['startTime','وقت الكشف','slots']]},
+  specialties: {
+    label: "التخصصات",
+    single: "تخصص",
+    fields: [
+      ["name", "اسم التخصص"],
+      ["description", "الوصف", "textarea"],
+      ["icon", "رمز تعبيري", "optional"],
+    ],
+  },
+  doctors: {
+    label: "الدكاترة",
+    single: "طبيب",
+    fields: [
+      ["name", "اسم الطبيب"],
+      ["title", "الدرجة / المسمى"],
+      ["email", "البريد الإلكتروني", "email"],
+      ["specialtyId", "التخصص", "specialties"],
+      ["image", "رابط الصورة", "url"],
+      ["bio", "نبذة", "textarea"],
+    ],
+  },
+  services: {
+    label: "الخدمات",
+    single: "خدمة",
+    fields: [
+      ["title", "اسم الخدمة"],
+      ["description", "الوصف", "textarea"],
+      ["price", "السعر بالجنيه", "number"],
+      ["specialtyId", "التخصص (اختياري)", "specialtiesOptional"],
+    ],
+  },
+  schedules: {
+    label: "جداول العمل",
+    single: "فترة عمل",
+    fields: [
+      ["doctorId", "الطبيب", "doctors"],
+      ["date", "التاريخ", "date"],
+      ["startTime", "من الساعة", "time"],
+      ["endTime", "إلى الساعة", "time"],
+      ["slotMinutes", "مدة الكشف بالدقائق", "number"],
+    ],
+  },
+  bookings: {
+    label: "الحجوزات",
+    single: "حجز",
+    fields: [
+      ["patientName", "اسم المريض"],
+      ["phone", "رقم التواصل", "tel"],
+      ["scheduleId", "فترة العمل", "schedules"],
+      ["startTime", "وقت الكشف", "slots"],
+    ],
+  },
 };
-export default function ClinicAdminDashboard(){
- const {token,signOut}=useAuth(), editor=useRef(null);
- const [data,setData]=useState({specialties:[],doctors:[],services:[],schedules:[],bookings:[]});
- const [clinic,setClinic]=useState(null),[tab,setTab]=useState('specialties'),[query,setQuery]=useState('');
- const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const [editing,setEditing]=useState(null),[form,setForm]=useState({}),[deleting,setDeleting]=useState(null);
- const config=sections[tab], request=(path,options={})=>apiRequest(path,{token,...options});
- async function load(){setLoading(true);try{const keys=Object.keys(sections),values=await Promise.all(keys.map(k=>request('/'+k)));setData(Object.fromEntries(keys.map((k,i)=>[k,values[i]])));setClinic(await request('/clinic/me'));}catch(e){setError(e.message);if(e.status===401)signOut();}finally{setLoading(false);}}
- useEffect(()=>{load();},[token]);
- useEffect(()=>{if(editing)editor.current?.querySelector('input,select')?.focus();},[editing]);
- const doctorName=id=>data.doctors.find(d=>d._id===id)?.name||'طبيب';
- const period=s=>`${doctorName(s.doctorId)} · ${s.date} · ${s.startTime}–${s.endTime}`;
- function open(item={}){setEditing(item);setError('');setNotice('');setDeleting(null);setForm(Object.fromEntries(config.fields.map(([key])=>[key,item[key]??(key==='slotMinutes'?30:key==='price'?0:'')])));}
- function options(type){
-  if(type.startsWith('specialties'))return data.specialties.map(x=>[x._id,x.name+(x.isActive?'':' (متوقف)')]);
-  if(type==='doctors')return data.doctors.map(x=>[x._id,x.name+(x.isActive?'':' (متوقف)')]);
-  if(type==='schedules')return data.schedules.filter(x=>x.isActive||x._id===editing?.scheduleId).map(x=>[x._id,period(x)]);
-  const s=data.schedules.find(x=>x._id===form.scheduleId);if(!s)return [];
-  const min=t=>Number(t.slice(0,2))*60+Number(t.slice(3)),values=[];
-  for(let n=min(s.startTime);n+s.slotMinutes<=min(s.endTime);n+=s.slotMinutes){const t=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');if(!data.bookings.some(b=>b._id!==editing?._id&&b.isActive&&b.scheduleId===s._id&&b.startTime===t))values.push([t,t]);}return values;
- }
- async function action(fn,message){setBusy(true);setError('');setNotice('');try{await fn();setEditing(null);setDeleting(null);setNotice(message);await load();}catch(e){setError(e.message);}finally{setBusy(false);}}
- function save(e){e.preventDefault();const body={...form,isActive:editing.isActive??true};config.fields.forEach(([k,,t])=>{if(t==='number')body[k]=Number(body[k]);if(t==='specialtiesOptional'&&!body[k])body[k]=null;});action(()=>request('/'+tab+(editing._id?'/'+editing._id:''),{method:editing._id?'PUT':'POST',body}),'تم حفظ البيانات بنجاح.');}
- const rows=data[tab].filter(x=>JSON.stringify([x.name,x.title,x.patientName,x.phone,x.date,doctorName(x.doctorId)]).toLowerCase().includes(query.toLowerCase()));
- return <AdminShell title={clinic?.name||'إدارة العيادة'} subtitle="كل ما تحتاجه لإدارة يوم العيادة، في مكان واحد.">
- <div className="workspace-intro"><div><span className="eyebrow">مساحة عيادتك</span><h2>يوم منظم، ورعاية أفضل.</h2><p>أضف التخصصات، ثم الدكاترة وفترات العمل لاستقبال الحجوزات.</p></div>{clinic&&<a className="secondary-button" href={'/'+clinic.slug} target="_blank" rel="noreferrer">عرض موقع العيادة ↗</a>}</div>
- <div className="stats-grid">{[['الدكاترة النشطون',data.doctors],['فترات العمل',data.schedules],['الحجوزات الفعالة',data.bookings]].map(([label,items])=><div className="stat-card" key={label}><span>{label}</span><strong>{items.filter(x=>x.isActive).length}</strong><small>مسجل بالعيادة</small></div>)}</div>
- <nav className="workspace-tabs" aria-label="أقسام العيادة">{Object.entries(sections).map(([key,s])=><button key={key} aria-current={tab===key?'page':undefined} className={tab===key?'selected':''} disabled={busy} onClick={()=>{setTab(key);setEditing(null);setDeleting(null);setQuery('');setError('');setNotice('');}}>{s.label}<span>{data[key].length}</span></button>)}</nav>
- <div className="section-toolbar"><div><h2>{config.label}</h2><p>{tab==='schedules'?'أضف فترة بتاريخ محدد. جميع الأوقات بتوقيت القاهرة.':tab==='bookings'?'حجوزات الموقع والاستقبال. إلغاء الحجز يتيح الوقت من جديد.':'أضف وعدّل البيانات، أو عطّل ظهورها مؤقتًا.'}</p></div><div className="toolbar-actions"><button className="secondary-button" disabled={loading||busy} onClick={load}><RefreshCw size={16}/>تحديث</button><button className="primary-button" disabled={busy||loading} onClick={()=>open()}><Plus size={18}/>إضافة {config.single}</button></div></div>
- {error&&<div className="form-error" role="alert">{error}</div>}{notice&&<div className="form-success" role="status">{notice}</div>}
- {editing&&<section className="editor-panel" ref={editor}><h3>{editing._id?'تعديل':'إضافة'} {config.single}</h3><form onSubmit={save} className="admin-form"><div className="form-grid">{config.fields.map(([key,label,type='text'])=><label className="field-label" key={key}>{label}{['specialties','specialtiesOptional','doctors','schedules','slots'].includes(type)?<select required={type!=='specialtiesOptional'} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value,...(key==='scheduleId'?{startTime:''}:{})})}><option value="">اختر {label}</option>{options(type).map(([id,text])=><option key={id} value={id}>{text}</option>)}</select>:type==='textarea'?<textarea maxLength={2000} rows={3} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})}/>:<input type={type==='optional'?'text':type} required={!['optional','url'].includes(type)} min={key==='slotMinutes'?5:type==='number'?0:undefined} max={key==='slotMinutes'?120:undefined} step={key==='price'?'0.01':undefined} maxLength={254} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})}/>}</label>)}</div><div className="modal-actions"><button type="button" className="secondary-button" disabled={busy} onClick={()=>setEditing(null)}>إلغاء</button><button className="primary-button" disabled={busy}>{busy?'جارٍ الحفظ…':'حفظ البيانات'}</button></div></form></section>}
- <div className="table-card"><div className="table-toolbar"><label className="search-field"><Search size={18}/><input aria-label="بحث" placeholder="ابحث بالاسم أو التاريخ أو الهاتف…" value={query} onChange={e=>setQuery(e.target.value)}/></label><span className="result-count">{rows.length} عنصر</span></div>{loading?<div className="empty-state" role="status">جارٍ تحميل البيانات…</div>:rows.length===0?<div className="empty-state"><h3>{query?'لا توجد نتائج':'ابدأ بإضافة أول '+config.single}</h3><p>استخدم زر الإضافة بالأعلى لإدخال البيانات.</p></div>:<div className="data-list">{rows.map(item=><article className="data-row" key={item._id}><div className="data-primary"><b>{tab==='schedules'?period(item):item.name||item.title||item.patientName}</b><small>{tab==='bookings'?`${doctorName(item.doctorId)} · ${item.date} · ${item.startTime} · ${item.phone}`:tab==='services'?`${item.price} جنيه`:item.title||item.description||''}</small></div><span className={'state-pill '+(!item.isActive?'paused':'')}>{item.isActive?(tab==='bookings'?'حجز فعال':'نشط'):(tab==='bookings'?'ملغي':'متوقف')}</span><div className="row-actions"><button className="text-button" disabled={busy} onClick={()=>open(item)}><Pencil size={14}/>تعديل</button><button className="text-button" disabled={busy} onClick={()=>action(()=>request(`/${tab}/${item._id}/status`,{method:'PATCH',body:{isActive:!item.isActive}}),'تم تحديث الحالة.')}>{item.isActive?(tab==='bookings'?'إلغاء الحجز':'تعطيل'):'تفعيل'}</button><button className="text-button danger" disabled={busy} onClick={()=>setDeleting(item._id)}><Trash2 size={14}/>حذف</button></div>{deleting===item._id&&<div className="delete-confirm" role="alert">حذف هذا العنصر نهائيًا؟ <button className="secondary-button" disabled={busy} onClick={()=>setDeleting(null)}>رجوع</button><button className="primary-button danger-bg" disabled={busy} onClick={()=>action(()=>request(`/${tab}/${item._id}`,{method:'DELETE'}),'تم الحذف.')}>تأكيد الحذف</button></div>}</article>)}</div>}</div>
- </AdminShell>;
+
+export default function ClinicAdminDashboard() {
+  const { token, signOut } = useAuth();
+  const editor = useRef(null);
+
+  const [data, setData] = useState({
+    specialties: [],
+    doctors: [],
+    services: [],
+    schedules: [],
+    bookings: [],
+  });
+
+  const [clinic, setClinic] = useState(null);
+  const [tab, setTab] = useState("specialties");
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const [deleting, setDeleting] = useState(null);
+
+  const config = sections[tab];
+  const request = (path, options = {}) => apiRequest(path, { token, ...options });
+
+  async function load() {
+    setLoading(true);
+    try {
+      const keys = Object.keys(sections);
+      const values = await Promise.all(keys.map((k) => request("/" + k)));
+      setData(Object.fromEntries(keys.map((k, i) => [k, values[i]])));
+      setClinic(await request("/clinic/me"));
+    } catch (e) {
+      setError(e?.message || "حدث خطأ غير متوقع أثناء جلب البيانات");
+      // ✅ الحماية باستخدام Optional Chaining لمنع الأيرور الكارثي
+      if (e?.status === 401) signOut();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, [token]);
+
+  useEffect(() => {
+    if (editing) editor.current?.querySelector("input,select")?.focus();
+  }, [editing]);
+
+  const doctorName = (id) => {
+    const docId = typeof id === "object" ? id?._id : id;
+    return data.doctors.find((d) => d._id === docId)?.name || "طبيب";
+  };
+
+  const period = (s) =>
+    `${doctorName(s.doctorId)} · ${s.date} · ${s.startTime}–${s.endTime}`;
+
+  function open(item = {}) {
+    setEditing(item);
+    setError("");
+    setNotice("");
+    setDeleting(null);
+
+    setForm(
+      Object.fromEntries(
+        config.fields.map(([key, , type]) => {
+          let val = item[key];
+          if (val && typeof val === "object" && val._id) {
+            val = val._id;
+          }
+          return [
+            key,
+            val ?? (key === "slotMinutes" ? 30 : key === "price" ? 0 : ""),
+          ];
+        })
+      )
+    );
+  }
+
+  function options(type) {
+    if (type.startsWith("specialties"))
+      return data.specialties.map((x) => [
+        x._id,
+        x.name + (x.isActive ? "" : " (متوقف)"),
+      ]);
+    if (type === "doctors")
+      return data.doctors.map((x) => [
+        x._id,
+        x.name + (x.isActive ? "" : " (متوقف)"),
+      ]);
+    if (type === "schedules")
+      return data.schedules
+        .filter((x) => x.isActive || x._id === editing?.scheduleId)
+        .map((x) => [x._id, period(x)]);
+
+    const s = data.schedules.find((x) => x._id === form.scheduleId);
+    if (!s) return [];
+
+    const min = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
+    const values = [];
+
+    for (
+      let n = min(s.startTime);
+      n + s.slotMinutes <= min(s.endTime);
+      n += s.slotMinutes
+    ) {
+      const t =
+        String(Math.floor(n / 60)).padStart(2, "0") +
+        ":" +
+        String(n % 60).padStart(2, "0");
+
+      if (
+        !data.bookings.some(
+          (b) =>
+            b._id !== editing?._id &&
+            b.isActive &&
+            b.scheduleId === s._id &&
+            b.startTime === t
+        )
+      )
+        values.push([t, t]);
+    }
+    return values;
+  }
+
+  async function action(fn, message) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+      setEditing(null);
+      setDeleting(null);
+      setNotice(message);
+      await load();
+    } catch (e) {
+      setError(e?.message || "تعذر إتمام العملية.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function save(e) {
+    e.preventDefault();
+    const body = { ...form, isActive: editing._id ? (editing.isActive ?? true) : true };
+
+    config.fields.forEach(([k, , t]) => {
+      if (t === "number") {
+        body[k] = Number(body[k]);
+      }
+      if (["specialties", "specialtiesOptional", "doctors", "schedules", "slots"].includes(t)) {
+        if (!body[k] || body[k] === "") {
+          delete body[k];
+        }
+      }
+    });
+
+    action(
+      () =>
+        request("/" + tab + (editing._id ? "/" + editing._id : ""), {
+          method: editing._id ? "PUT" : "POST",
+          body,
+        }),
+      "تم حفظ البيانات بنجاح."
+    );
+  }
+
+  const rows = data[tab].filter((x) =>
+    JSON.stringify([
+      x.name,
+      x.title,
+      x.patientName,
+      x.phone,
+      x.date,
+      doctorName(x.doctorId),
+    ])
+      .toLowerCase()
+      .includes(query.toLowerCase())
+  );
+
+  return (
+    <AdminShell
+      title={clinic?.name || "إدارة العيادة"}
+      subtitle="كل ما تحتاجه لإدارة يوم العيادة، في مكان واحد."
+    >
+      <div className="workspace-intro">
+        <div>
+          <span className="eyebrow">مساحة عيادتك</span>
+          <h2>يوم منظم، ورعاية أفضل.</h2>
+          <p>أضف التخصصات، ثم الدكاترة وفترات العمل لاستقبال الحجوزات.</p>
+        </div>
+        {clinic && (
+          <a
+            className="secondary-button"
+            href={"/" + clinic.slug}
+            target="_blank"
+            rel="noreferrer"
+          >
+            عرض موقع العيادة ↗
+          </a>
+        )}
+      </div>
+
+      <div className="stats-grid">
+        {[
+          ["الدكاترة النشطون", data.doctors],
+          ["فترات العمل", data.schedules],
+          ["الحجوزات الفعالة", data.bookings],
+        ].map(([label, items]) => (
+          <div className="stat-card" key={label}>
+            <span>{label}</span>
+            <strong>{items.filter((x) => x.isActive).length}</strong>
+            <small>مسجل بالعيادة</small>
+          </div>
+        ))}
+      </div>
+
+      <nav className="workspace-tabs" aria-label="أقسام العيادة">
+        {Object.entries(sections).map(([key, s]) => (
+          <button
+            key={key}
+            aria-current={tab === key ? "page" : undefined}
+            className={tab === key ? "selected" : ""}
+            disabled={busy}
+            onClick={() => {
+              setTab(key);
+              setEditing(null);
+              setDeleting(null);
+              setQuery("");
+              setError("");
+              setNotice("");
+            }}
+          >
+            {s.label}
+            <span>{data[key].length}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="section-toolbar">
+        <div>
+          <h2>{config.label}</h2>
+          <p>
+            {tab === "schedules"
+              ? "أضف فترة بتاريخ محدد. جميع الأوقات بتوقيت القاهرة."
+              : tab === "bookings"
+                ? "حجوزات الموقع والاستقبال. إلغاء الحجز يتيح الوقت من جديد."
+                : "أضف وعدّل البيانات، أو عطّل ظهورها مؤقتًا."}
+          </p>
+        </div>
+        <div className="toolbar-actions">
+          <button
+            className="secondary-button"
+            disabled={loading || busy}
+            onClick={load}
+          >
+            <RefreshCw size={16} />
+            تحديث
+          </button>
+          <button
+            className="primary-button"
+            disabled={busy || loading}
+            onClick={() => open()}
+          >
+            <Plus size={18} />
+            إضافة {config.single}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="form-error" role="alert">
+          {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="form-success" role="status">
+          {notice}
+        </div>
+      )}
+
+      {editing && (
+        <section className="editor-panel" ref={editor}>
+          <h3>
+            {editing._id ? "تعديل" : "إضافة"} {config.single}
+          </h3>
+          <form onSubmit={save} className="admin-form">
+            <div className="form-grid">
+              {config.fields.map(([key, label, type = "text"]) => (
+                <label className="field-label" key={key}>
+                  {label}
+                  {[
+                    "specialties",
+                    "specialtiesOptional",
+                    "doctors",
+                    "schedules",
+                    "slots",
+                  ].includes(type) ? (
+                    <select
+                      required={type !== "specialtiesOptional"}
+                      value={form[key] || ""}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          [key]: e.target.value,
+                          ...(key === "scheduleId" ? { startTime: "" } : {}),
+                        })
+                      }
+                    >
+                      <option value="">اختر {label}</option>
+                      {options(type).map(([id, text]) => (
+                        <option key={id} value={id}>
+                          {text}
+                        </option>
+                      ))}
+                    </select>
+                  ) : type === "textarea" ? (
+                    <textarea
+                      maxLength={2000}
+                      rows={3}
+                      value={form[key] || ""}
+                      onChange={(e) =>
+                        setForm({ ...form, [key]: e.target.value })
+                      }
+                    />
+                  ) : (
+                    <input
+                      type={type === "optional" ? "text" : type}
+                      required={!["optional", "url"].includes(type)}
+                      min={
+                        key === "slotMinutes"
+                          ? 5
+                          : type === "number"
+                            ? 0
+                            : undefined
+                      }
+                      max={key === "slotMinutes" ? 120 : undefined}
+                      step={key === "price" ? "0.01" : undefined}
+                      maxLength={254}
+                      value={form[key] || ""}
+                      onChange={(e) =>
+                        setForm({ ...form, [key]: e.target.value })
+                      }
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={busy}
+                onClick={() => setEditing(null)}
+              >
+                إلغاء
+              </button>
+              <button className="primary-button" disabled={busy}>
+                {busy ? "جارٍ الحفظ…" : "حفظ البيانات"}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      <div className="table-card">
+        <div className="table-toolbar">
+          <label className="search-field">
+            <Search size={18} />
+            <input
+              aria-label="بحث"
+              placeholder="ابحث بالاسم أو التاريخ أو الهاتف…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <span className="result-count">{rows.length} عنصر</span>
+        </div>
+
+        {loading ? (
+          <div className="empty-state" role="status">
+            جارٍ تحميل البيانات…
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="empty-state">
+            <h3>
+              {query ? "لا توجد نتائج" : "ابدأ بإضافة أول " + config.single}
+            </h3>
+            <p>استخدم زر الإضافة بالأعلى لإدخال البيانات.</p>
+          </div>
+        ) : (
+          <div className="data-list">
+            {rows.map((item) => (
+              <article className="data-row" key={item._id}>
+                <div className="data-primary">
+                  <b>
+                    {tab === "schedules"
+                      ? period(item)
+                      : item.name || item.title || item.patientName}
+                  </b>
+                  <small>
+                    {tab === "bookings"
+                      ? `${doctorName(item.doctorId)} · ${item.date} · ${item.startTime} · ${item.phone}`
+                      : tab === "services"
+                        ? `${item.price} جنيه`
+                        : item.title || item.description || ""}
+                  </small>
+                </div>
+                <span
+                  className={"state-pill " + (!item.isActive ? "paused" : "")}
+                >
+                  {item.isActive
+                    ? tab === "bookings"
+                      ? "حجز فعال"
+                      : "نشط"
+                    : tab === "bookings"
+                      ? "ملغي"
+                      : "متوقف"}
+                </span>
+                <div className="row-actions">
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() => open(item)}
+                  >
+                    <Pencil size={14} />
+                    تعديل
+                  </button>
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() =>
+                      action(
+                        () =>
+                          request(`/${tab}/${item._id}/status`, {
+                            method: "PATCH",
+                            body: { isActive: !item.isActive },
+                          }),
+                        "تم تحديث الحالة."
+                      )
+                    }
+                  >
+                    {item.isActive
+                      ? tab === "bookings"
+                        ? "إلغاء الحجز"
+                        : "تعطيل"
+                      : "تفعيل"}
+                  </button>
+                  <button
+                    className="text-button danger"
+                    disabled={busy}
+                    onClick={() => setDeleting(item._id)}
+                  >
+                    <Trash2 size={14} />
+                    حذف
+                  </button>
+                </div>
+                {deleting === item._id && (
+                  <div className="delete-confirm" role="alert">
+                    {tab === "bookings" ? "إلغاء هذا الحجز نهائيًا وإتاحة الوقت؟ " : "حذف هذا العنصر نهائيًا؟ "}
+                    <button
+                      className="secondary-button"
+                      disabled={busy}
+                      onClick={() => setDeleting(null)}
+                    >
+                      رجوع
+                    </button>
+                    <button
+                      className="primary-button danger-bg"
+                      disabled={busy}
+                      onClick={() =>
+                        action(
+                          () =>
+                            request(`/${tab}/${item._id}`, {
+                              method: "DELETE",
+                            }),
+                          "تم الحذف."
+                        )
+                      }
+                    >
+                      تأكيد الحذف
+                    </button>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
 }
